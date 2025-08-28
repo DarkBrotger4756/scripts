@@ -19,27 +19,27 @@ JAIL_FILE="/etc/fail2ban/jail.local"
 if [ ! -f "$JAIL_FILE" ]; then
     echo "Создаю $JAIL_FILE..."
     cat <<EOF > "$JAIL_FILE"
-[mysqld-auth]
-enabled  = true
-filter   = mysqld-auth
-port     = 3306
-logpath  = /var/log/mysql/error.log
+[sshd]
+enabled = true
+port    = ssh
+filter  = sshd
+logpath = /var/log/auth.log
 maxretry = 5
 bantime  = 3600
 ignoreip = 127.0.0.1/8 $IGNORE_IPS
 EOF
 else
-    echo "Обновляю jail.local для mysqld-auth..."
-    if grep -q "^\[mysqld-auth\]" "$JAIL_FILE"; then
-        sed -i "/^\[mysqld-auth\]/,/^\[.*\]/ s/^ignoreip.*/ignoreip = 127.0.0.1\/8 $IGNORE_IPS/" "$JAIL_FILE"
+    echo "Обновляю jail.local для sshd..."
+    if grep -q "^\[sshd\]" "$JAIL_FILE"; then
+        sed -i "/^\[sshd\]/,/^\[.*\]/ s/^ignoreip.*/ignoreip = 127.0.0.1\/8 $IGNORE_IPS/" "$JAIL_FILE"
     else
         cat <<EOF >> "$JAIL_FILE"
 
-[mysqld-auth]
-enabled  = true
-filter   = mysqld-auth
-port     = 3306
-logpath  = /var/log/mysql/error.log
+[sshd]
+enabled = true
+port    = ssh
+filter  = sshd
+logpath = /var/log/auth.log
 maxretry = 5
 bantime  = 3600
 ignoreip = 127.0.0.1/8 $IGNORE_IPS
@@ -48,5 +48,5 @@ EOF
 fi
 
 systemctl restart fail2ban
-echo "Fail2ban для MySQL настроен и перезапущен."
-fail2ban-client status mysqld-auth
+echo "Fail2ban для SSH настроен и перезапущен."
+fail2ban-client status sshd
