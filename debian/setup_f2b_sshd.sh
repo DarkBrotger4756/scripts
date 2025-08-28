@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-IGNORE_IPS="127.0.0.1/8 ::1 89.218.6.32/29"
+IGNORE_IPS="127.0.0.1/8 ::1 89.218.6.32/29 77.37.97.27/32 194.32.141.205/32"
 
 # Установка fail2ban если его нет
 if ! command -v fail2ban-server &>/dev/null; then
