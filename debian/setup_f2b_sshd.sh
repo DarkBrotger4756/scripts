@@ -2,51 +2,44 @@
 
 set -e
 
-# Проверка и установка fail2ban
-if ! command -v fail2ban-server >/dev/null 2>&1; then
-    echo "Устанавливаю fail2ban..."
-    apt update && apt install -y fail2ban
-else
-    echo "Fail2ban уже установлен."
-fi
+# Запрос IP для исключения
+read -p "Введите список IP-адресов через пробел, которые нужно добавить в ignoreip: " IGNORE_IPS
 
-# Запрос IP-адресов для исключения
-read -p "Введите IP-адреса через пробел, которые нужно исключить (ignoreip): " IGNORE_IPS
+# Установка fail2ban, если не установлен
+if ! command -v fail2ban-server >/dev/null 2>&1; then
+    apt update && apt install -y fail2ban
+fi
 
 JAIL_FILE="/etc/fail2ban/jail.local"
 
-# Создание или обновление jail.local
+# Если файла нет — создаём
 if [ ! -f "$JAIL_FILE" ]; then
-    echo "Создаю $JAIL_FILE..."
-    cat <<EOF > "$JAIL_FILE"
-[sshd]
-enabled = true
-port    = ssh
-filter  = sshd
-logpath = /var/log/auth.log
+    cat > "$JAIL_FILE" <<EOF
+[DEFAULT]
+ignoreip = 127.0.0.1/8
+bantime  = 10m
+findtime = 10m
 maxretry = 5
-bantime  = 3600
-ignoreip = 127.0.0.1/8 $IGNORE_IPS
 EOF
-else
-    echo "Обновляю jail.local для sshd..."
-    if grep -q "^\[sshd\]" "$JAIL_FILE"; then
-        sed -i "/^\[sshd\]/,/^\[.*\]/ s/^ignoreip.*/ignoreip = 127.0.0.1\/8 $IGNORE_IPS/" "$JAIL_FILE"
-    else
-        cat <<EOF >> "$JAIL_FILE"
+fi
+
+# Обновляем ignoreip
+sed -i "s|^\(ignoreip\s*=\s*\)|\1$IGNORE_IPS |" "$JAIL_FILE"
+
+# Добавляем секцию для sshd, если её нет
+if ! grep -q "^\[sshd\]" "$JAIL_FILE"; then
+    cat >> "$JAIL_FILE" <<EOF
 
 [sshd]
 enabled = true
 port    = ssh
 filter  = sshd
 logpath = /var/log/auth.log
-maxretry = 5
-bantime  = 3600
-ignoreip = 127.0.0.1/8 $IGNORE_IPS
+backend = systemd
 EOF
-    fi
 fi
 
 systemctl restart fail2ban
-echo "Fail2ban для SSH настроен и перезапущен."
+echo "Fail2ban настроен для SSHD."
+sleep 3
 fail2ban-client status sshd
